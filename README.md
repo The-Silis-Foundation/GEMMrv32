@@ -358,6 +358,82 @@ path addresses this for the BRAM-resident operand, but loading the weight
 matrix still bottlenecks through the CPU. This is the primary target for
 future improvement.
 
+### Linux Kernel Boot Log (noMMU RISC-V 32)
+
+GEMMrv32 has also been validated with noMMU Linux (Kernel 6.6.83) running on the NEORV32 core with 32 MB external SDRAM. The kernel image, device tree (DTB), and initramfs are staged and booted directly via the stage2 xmodem loader.
+
+#### UART Boot Log Capture (115200 baud)
+
+```
+[stage2] ready - RV32IMAC NEORV32 loader
+[stage2] CLK=0x02faf080
+[stage2] SDRAM word-write test...
+[stage2] SDRAM test PASS
+[stage2] Mode: Linux direct boot
+[stage2] Memory layout:
+  Kernel:    0x40000000
+  DTB:       0x41f00000
+  Initramfs: 0x41f80000
+[stage2] All payloads loaded:
+  Kernel:  0x00162600 bytes
+  DTB:     0x00000600 bytes
+  Initrd:  0x00000780 bytes
+
+[stage2] Booting Linux...
+  a0 = 0 (hartid)
+  a1 = 0x41f00000 (DTB)
+  PC = 0x40000000 (kernel)
+[stage2] SDRAM exec test @0x40162600
+SDRAM exec OK
+
+[    0.000000] Linux version 6.6.83-g7d6073865396-dirty (test@H3C) (riscv-none-elf-gcc (xPack GNU RISC-V Embedded GCC x86_64) 14.2.0, GNU ld (xPack GNU RISC-V Embedded GCC x86_64) 2.43.1)
+[    0.000000] Machine model: NEORV32 on HeiJin AX301 (EP4CE6)
+[    0.000000] Forcing kernel command line to: earlycon=neorv32,0xfff50000 console=ttyNEO0,115200
+[    0.000000] earlycon: neorv32 at MMIO 0xfff50000 (options '')
+[    0.000000] printk: bootconsole [neorv32] enabled
+[    0.000000] Zone ranges:
+[    0.000000]   Normal   [mem 0x0000000040000000-0x0000000041ffffff]
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x0000000041ffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x0000000041ffffff]
+[    0.000000] riscv: base ISA extensions acim
+[    0.000000] riscv: ELF capabilities acim
+[    0.000000] Kernel command line: earlycon=neorv32,0xfff50000 console=ttyNEO0,115200
+[    0.000000] Dentry cache hash table entries: 4096 (order: 2, 16384 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 2048 (order: 1, 8192 bytes, linear)
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 8128
+[    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[    0.000000] Memory: 30968K/32768K available (1035K kernel code, 125K rwdata, 155K rodata, 96K init, 49K bss, 1800K reserved, 0K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-1, MinObjects=0, CPUs=1, Nodes=1
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] riscv-intc: 32 local interrupts mapped
+[    0.000000] clint: clint@fff40000: timer running at 50000000 Hz
+[    0.000000] clocksource: clint_clocksource: mask: 0xffffffffffffffff max_cycles: 0xb8812736b, max_idle_ns: 440795202655 ns
+[    0.000536] sched_clock: 64 bits at 50MHz, resolution 20ns, wraps every 4398046511100ns
+[    0.062703] Calibrating delay loop (skipped), value calculated using timer frequency.. 100.00 BogoMIPS (lpj=200000)
+[    0.107261] pid_max: default: 4096 minimum: 301
+[    0.180255] Mount-cache hash table entries: 1024 (order: 0, 4096 bytes, linear)
+[    0.221219] Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes, linear)
+[    2.608665] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    2.652888] futex hash table entries: 16 (order: -5, 192 bytes, linear)
+[    7.896570] cpu0: Ratio of byte access time to unaligned word access is 0.00, unaligned accesses are slow
+[    9.471223] clocksource: Switched to clocksource clint_clocksource
+...
+========================================
+ NEORV32 nommu Linux — mini shell
+========================================
+Linux (none) 6.6.83-... riscv32
+Uptime:    18 s
+Total RAM: 31000 KB
+Free RAM:  30240 KB
+Processes: 15
+
+Type 'help' for commands.
+
+nommu#
+```
+
 ---
 
 ## TensorFlow Lite Micro Port
