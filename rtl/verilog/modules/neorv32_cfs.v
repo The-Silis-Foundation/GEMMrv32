@@ -59,6 +59,7 @@ module neorv32_cfs (
   // are not associated with any physical registers - any access to those is simply ignored but still acknowledged;
   // read accesses will return zero. Only full-word write accesses are supported by this example.
   // Sub-word write accesses are ignored but still acknowledged.
+  // posedge clk_i or negedge rstn_i is used for async ckt
 
   reg [31:0] rsp_data;
   reg rsp_ack;
