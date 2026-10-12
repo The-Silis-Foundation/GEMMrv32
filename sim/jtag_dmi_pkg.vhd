@@ -13,6 +13,9 @@ use ieee.std_logic_1164.all;
 
 package jtag_dmi_pkg is
 
+  -- This package is a testbench utility: its procedures contain timing controls
+  -- (`wait for`) and therefore are intended for simulation rather than synthesis.
+
   -- JTAG clock period --
   constant t_jtag_c : time := 80 ns;
 
@@ -50,6 +53,7 @@ package body jtag_dmi_pkg is
 
   -- Generate single JTAG clock cycle and update TX / sample RX data ------------------------
   -- -------------------------------------------------------------------------------------------
+  -- TMS and TDI are established while TCK is low; TDO is sampled at the rising edge.
   procedure jtag_tck_cycle(
     signal   core_tck : out std_ulogic;
     signal   core_tms : out std_ulogic;
@@ -73,6 +77,8 @@ package body jtag_dmi_pkg is
 
   -- Reset TAP controller state machine -----------------------------------------------------
   -- -------------------------------------------------------------------------------------------
+  -- Holding TMS high for at least five TCK rising edges forces the TAP into RESET
+  -- from any legal state. This implementation uses nine edges as a safe margin.
   procedure jtag_reset(
     signal core_tck : out std_ulogic;
     signal core_tms : out std_ulogic;
@@ -89,6 +95,8 @@ package body jtag_dmi_pkg is
 
   -- Set TAP instruction register (IR) ------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
+  -- JTAG scan registers shift least-significant bit first. TMS becomes '1' with
+  -- the final bit so that bit is shifted before entering EXIT1-IR.
   procedure jtag_shift_ir(
     signal   core_tck : out std_ulogic;
     signal   core_tms : out std_ulogic;
@@ -112,6 +120,8 @@ package body jtag_dmi_pkg is
 
   -- Set TAP data register (DMI only) -------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
+  -- The 41-bit DMI scan frame is address[6:0] & data[31:0] & operation[1:0].
+  -- The loop below serializes this vector from bit 0 through bit 40.
   procedure jtag_shift_dr(
     signal   core_tck : out std_ulogic;
     signal   core_tms : out std_ulogic;
@@ -139,6 +149,8 @@ package body jtag_dmi_pkg is
 
   -- Write to DMI register ------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
+  -- IR value 10001 selects the Debug Module Interface data register. Operation "10"
+  -- in the two least-significant frame bits requests a write.
   procedure dmi_write(
     signal   core_tck : out std_ulogic;
     signal   core_tms : out std_ulogic;
@@ -156,6 +168,9 @@ package body jtag_dmi_pkg is
 
   -- Read from DMI register -----------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
+  -- DMI reads are pipelined: the first scan submits a read request and the next
+  -- scan returns its response. A NOP is sent during that second scan to avoid
+  -- issuing an unintended additional request.
   procedure dmi_read(
     signal   core_tck : out std_ulogic;
     signal   core_tms : out std_ulogic;
