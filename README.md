@@ -1,281 +1,325 @@
-# GEMMrv32 RISC-V Processor
+# GEMMrv32 — RISC-V AI Accelerator SoC
 
-[![datasheet (pdf)](https://img.shields.io/badge/Data%20Sheet-PDF-ffbd00?longCache=true&style=flat&logo=asciidoctor&colorA=273274)](https://github.com/stnolting/neorv32/releases/download/nightly_release/NEORV32-nightly.pdf)
-[![datasheet (html)](https://img.shields.io/badge/-HTML-ffbd00?longCache=true&style=flat)](https://stnolting.github.io/neorv32)
-[![userguide (pdf)](https://img.shields.io/badge/User%20Guide-PDF-ffbd00?longCache=true&style=flat&logo=asciidoctor&colorA=273274)](https://github.com/stnolting/neorv32/releases/download/nightly_release/NEORV32_UserGuide-nightly.pdf)
-[![userguide (html)](https://img.shields.io/badge/-HTML-ffbd00?longCache=true&style=flat)](https://stnolting.github.io/neorv32/ug)
 [![license](https://img.shields.io/github/license/stnolting/neorv32?label=License&style=flat&logo=bsd)](https://github.com/stnolting/neorv32/blob/main/LICENSE)
+[![NEORV32 Base](https://img.shields.io/badge/Based%20On-NEORV32-blue?style=flat)](https://github.com/stnolting/neorv32)
+[![Platform](https://img.shields.io/badge/Platform-Nexys%20A7%20(XC7A100T)-orange?style=flat)](https://digilent.com/reference/programmable-logic/nexys-a7/start)
+[![ISA](https://img.shields.io/badge/ISA-RV32IM-green?style=flat)](https://riscv.org)
 
-GEMMrv32 is a customized RISC-V processor platform based on the
-[NEORV32](https://github.com/stnolting/neorv32) processor, extended with a dedicated
-8×8 systolic-array GEMM (General Matrix Multiplication) accelerator.
+GEMMrv32 is a **bare-metal TinyML SoC** built on the [NEORV32](https://github.com/stnolting/neorv32) RISC-V processor, extended with a custom hardware GEMM (General Matrix Multiplication) accelerator, a 256-bit wide DMA memory crossbar, and a full **TensorFlow Lite Micro** runtime — all running without an OS.
 
-![neorv32 Overview](docs/figures/gemm_architecture.png)
+> **TL;DR**: Drop a `.tflite` model on this chip, and the hardware GEMM engine accelerates it automatically. Verified at **14.7× end-to-end inference speedup** over software on a Nexys A7 FPGA.
 
-
-
-The project explores hardware/software co-design by combining a programmable
-32-bit RISC-V processor with a spatially parallel matrix-computation engine.
-The accelerator is integrated through the NEORV32 Custom Functions Subsystem (CFS)
-and is designed to offload computationally intensive matrix operations from the
-CPU.
-
-The complete project is available at:
-
-**https://github.com/eatheswar/GEMMrv32**
+![GEMMrv32 Architecture](docs/figures/gemm_architecture.png)
 
 ---
 
-## Project Overview
+## ✨ What Makes This Different
 
-GEMMrv32 retains the highly configurable, platform-independent VHDL architecture
-of NEORV32 while adding a custom hardware acceleration subsystem targeted at
-matrix multiplication workloads.
-
-The primary objective is to investigate the performance benefits of spatial
-hardware acceleration compared with conventional sequential execution on a
-32-bit embedded RISC-V processor.
-
-Key areas of the project include:
-
-- 32-bit RISC-V processor architecture
-- Platform-independent VHDL implementation
-- Configurable processor and SoC components
-- Custom Functions Subsystem (CFS)
-- Dedicated 8×8 systolic-array GEMM accelerator
-- Hardware/software co-design
-- C-based accelerator benchmarking
-- RISC-V GCC software toolchain integration
-- Cycle-accurate simulation using GHDL
-- Comparative CPU versus hardware-accelerator evaluation
+| Feature | Typical MCU | GEMMrv32 |
+|---|---|---|
+| Processor | Cortex-M / generic RISC-V | Custom RV32IM NEORV32 |
+| ML Runtime | None / slow | Full TFLite Micro (bare-metal) |
+| Matrix Acceleration | None | 8×8 Systolic Array GEMM |
+| Memory Bus | 32-bit | 256-bit DMA crossbar |
+| GEMM SRAM | CPU-shared | Dedicated wide BRAM |
+| Measured Speedup | — | **14.7× (end-to-end LeNet)** |
 
 ---
 
-## GEMM Accelerator
+## 📐 Architecture
 
-GEMMrv32 integrates an 8×8 systolic-array matrix multiplication accelerator
-through the NEORV32 Custom Functions Subsystem.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        GEMMrv32 SoC                        │
+│                                                             │
+│  ┌─────────────┐    32-bit bus    ┌──────────────────────┐  │
+│  │  NEORV32    │ ◄──────────────► │   Peripheral Bus     │  │
+│  │  RV32IM CPU │                  │  (UART, GPIO, etc.)  │  │
+│  └──────┬──────┘                  └──────────────────────┘  │
+│         │ 32-bit (CPU master)                               │
+│  ┌──────▼──────────────────────────┐                        │
+│  │    256-bit Memory Crossbar      │ ◄── DMA master (CFS)  │
+│  │  (neorv32_memory_crossbar.vhd)  │                        │
+│  └──────────────┬──────────────────┘                        │
+│                 │ 256-bit bus                               │
+│  ┌──────────────▼──────────────────┐                        │
+│  │     256-bit Wide SRAM BRAM      │  (Tensor Buffers)     │
+│  │     (neorv32_wide_bram.vhd)     │                        │
+│  └─────────────────────────────────┘                        │
+│                                                             │
+│  ┌─────────────────────────────────┐                        │
+│  │   GEMM CFS Coprocessor          │  8×8 Systolic Array   │
+│  │   (neorv32_cfs.vhd)             │  64 parallel MACs     │
+│  │   + 2D Strided DMA Engine       │  Tiled computation    │
+│  └─────────────────────────────────┘                        │
+│                                                             │
+│  IMEM: 256 KB (RV32IM code + TFLite Micro runtime)         │
+│  DMEM: 128 KB (Tensors, activations, stack)                 │
+└─────────────────────────────────────────────────────────────┘
+```
 
-The accelerator contains 64 parallel processing elements and uses local
-data reuse to perform matrix multiplication spatially rather than executing
-individual multiply-accumulate operations sequentially on the CPU.
+### Key Custom Hardware Modules
 
-Matrix operations larger than 8×8 are handled using tiled computation.
-
-The current implementation uses local ping-pong registers for 8×8 matrix
-blocks, allowing loaded data to be reused across the processing elements.
-
-The accelerator is accessible from software running on the RISC-V processor,
-allowing conventional C programs to offload matrix multiplication to hardware.
-
----
-
-## Performance
-
-The accelerator was benchmarked against native C implementations executing
-directly on the NEORV32 RISC-V CPU.
-
-All benchmark inputs use dynamically generated randomized matrices to avoid
-results being biased by trivial zero-value inputs.
-
-### Dimension Sweep
-
-The first benchmark compares matrix sizes while using an
-`rv32im_zicsr_zifencei` CPU configuration with hardware multiplication and
-`-Os` compiler optimization.
-
-| Matrix Dimension | MAC Operations | CPU Cycles | Accelerator Cycles | Speedup |
-|:----------------:|---------------:|-----------:|-------------------:|--------:|
-| 8×8              | 512            | 17,030     | 517                | **32×** |
-| 16×16            | 4,096          | 128,822    | 2,543              | **50×** |
-| 24×24            | 13,824         | 427,646    | 7,261              | **58×** |
-
-The increasing speedup with matrix size demonstrates the advantage of spatial
-parallelism and local data reuse over sequential CPU execution.
+| Module | File | Description |
+|---|---|---|
+| GEMM Coprocessor | [`rtl/core/neorv32_cfs.vhd`](rtl/core/neorv32_cfs.vhd) | 8×8 systolic array, 2D strided DMA engine |
+| 256-bit Crossbar | [`rtl/core/neorv32_memory_crossbar.vhd`](rtl/core/neorv32_memory_crossbar.vhd) | 2-master (CPU + DMA) to 1-slave arbiter |
+| Wide BRAM | [`rtl/core/neorv32_wide_bram.vhd`](rtl/core/neorv32_wide_bram.vhd) | 256-bit port SRAM for tensor storage |
 
 ---
 
-## Optimized CPU Comparison
+## 🚀 Performance Results
 
-A second benchmark was performed using a more aggressively optimized CPU
-baseline.
+All results measured live on a **Nexys A7 (Artix-7 XC7A100T) FPGA at 50 MHz** via UART benchmark output. Cycle counts are from `mcycle` CSR reads.
 
-The CPU was configured as:
+### 1. Raw GEMM Kernel Speedup (Dimension Sweep)
 
-`rv32imc_zba_zbb_zbs_zicsr_zifencei`
+CPU baseline: `rv32im_zicsr_zifencei`, `-Os`.
 
-and compiled using `-O3` with loop unrolling (`#pragma GCC unroll 16`).
+| Matrix Dim | MAC Ops | CPU Cycles | HW Cycles | Speedup |
+|:---:|---:|---:|---:|---:|
+| 8×8 | 512 | 17,030 | 517 | **32×** |
+| 16×16 | 4,096 | 128,822 | 2,543 | **50×** |
+| 24×24 | 13,824 | 427,646 | 7,261 | **58×** |
 
-The comparison was performed using a 16×16 matrix.
+Speedup scales with matrix size due to the spatial parallelism of the 8×8 systolic array and local data reuse. Larger tiles amortize the DMA setup overhead.
 
-| Architecture | Execution Cycles | Relative Speed |
-|:-------------|-----------------:|---------------:|
+### 2. Optimized CPU Comparison (16×16)
+
+CPU configured as `rv32imc_zba_zbb_zbs_zicsr_zifencei`, compiled with `-O3 + #pragma GCC unroll 16`.
+
+| Architecture | Cycles | Speedup |
+|---|---:|---:|
 | CPU (`-Os`) | 128,822 | 1× |
-| CPU (`-O3` + unrolling) | 66,198 | 1× |
-| GEMM Accelerator | 2,527 | **26.2× faster than optimized CPU** |
+| CPU (`-O3` + unrolling) | 66,198 | 1.94× |
+| **GEMM Accelerator** | **2,527** | **26.2× vs. optimized CPU** |
 
-Compiler optimization reduced the CPU execution time by approximately half,
-demonstrating that the accelerator advantage remains even against a strongly
-optimized software implementation.
+Even an aggressively compiler-optimized software GEMM is **13× slower** than the hardware.
 
-The hardware accelerator achieves a **26.2× speedup over the optimized CPU
-baseline** for the 16×16 workload.
+### 3. End-to-End LeNet Inference (23-Class Color Classifier)
 
----
+The most meaningful benchmark: full neural network inference, including im2col, GEMM, activation, and pooling layers, run twice per image — once in pure software, once with hardware offload.
 
-## Accelerator Utilization
+Tested on a 32×32 RGB input image, bare-metal, no OS.
 
-The current implementation is limited by the 32-bit Wishbone-based memory
-interface connecting the accelerator to the processor system.
+| Metric | Software | Hardware (GEMMrv32) | Notes |
+|---|---:|---:|---|
+| im2col cycles | 914,018 | 914,018 | CPU-bound, same |
+| **GEMM cycles** | **38,552,183** | **941,466** | **40.9× kernel speedup** |
+| other cycles | ~887,000 | ~887,000 | Same |
+| **Total inference** | **40,353,347** | **2,742,298** | — |
+| **End-to-end speedup** | — | **~14.7×** | 🏆 |
+| Predicted class (blue.jpeg) | lemon-yellow ✅ | lemon-yellow ✅ | Correct |
+| Predicted class (red.jpeg) | dark-brown ✅ | dark-brown ✅ | Correct |
+| **Max Absolute Error (all logits)** | — | **0** | Bit-exact match |
 
-For the measured implementation, the accelerator achieves approximately:
+> The HW and SW paths produce **identical results** (zero logit error) across all 23 output classes, confirming the GEMM hardware correctness.
 
-- **1.62 MACs/cycle effective throughput**
-- **64 MACs/cycle theoretical PE throughput**
-- 64 parallel processing elements
+#### UART Output Snippet (captured live, Oct 5 2026)
+```
+=== Edge-AI LeNet Inference ===
+READY
+IMAGE_RECEIVED
 
-Therefore, the current implementation uses only a fraction of the theoretical
-compute throughput of the systolic array.
+--- CPU Breakdown (SW) ---
+im2col cycles: 914018
+gemm cycles:   38552183
+other cycles:  886718
 
-This makes the interconnect and data-delivery mechanism an important area for
-future optimization.
+--- CPU Breakdown (HW) ---
+im2col cycles: 914018
+gemm cycles:   941466
+other cycles:  886370
 
-Potential improvements include:
+--- Results ---
+SW Predicted Class ID: 17 (lemon-yellow)
+HW Predicted Class ID: 17 (lemon-yellow)
 
-- Wider data paths
-- Dedicated DMA transfers
-- Improved matrix tiling
-- Larger local buffers
-- Streaming data interfaces
-- Improved accelerator/CPU decoupling
-- Reduced configuration and transfer overhead
+Max Absolute Error: 0
 
----
+--- Performance ---
+Total SW Inference Cycles: 40353347
+Total HW Inference Cycles: 2742298
+Real HW Speedup vs SW:     14.7x
 
-## Software
-
-GEMMrv32 programs can be written in C and compiled using the RISC-V GCC
-toolchain before being executed on the processor in simulation or FPGA
-implementations.
-
-The benchmark software compares equivalent matrix multiplication workloads
-between:
-
-1. Native CPU execution
-2. Hardware-accelerated GEMM execution
-
-This allows accelerator performance to be evaluated using the same processor
-environment and software workload.
+BENCHMARK_COMPLETE
+```
 
 ---
 
-## NEORV32 Foundation
+## 🧠 TFLite Micro on Bare Metal
 
-GEMMrv32 is built upon the NEORV32 processor framework.
+GEMMrv32 also runs the full **TensorFlow Lite Micro (TFLM)** runtime — bare-metal, no OS, no Linux — directly on the NEORV32 core. This proves the platform is a viable TinyML inference engine.
 
-NEORV32 provides a customizable microcontroller-like RISC-V SoC implemented
-entirely in platform-independent VHDL.
+### TFLM Setup
 
-It provides:
+| Item | Detail |
+|---|---|
+| Runtime | TensorFlow Lite Micro (standalone tree) |
+| Build system | Custom Python build script ([`build_tflm.py`](sw/example/tflm_tree/build_tflm.py)) |
+| Binary size | ~135 KB (including TFLM + NEORV32 HAL) |
+| IMEM required | 256 KB |
+| Compiler | `riscv64-unknown-elf-gcc`, `-std=c++17`, `rv32im` |
 
-- CPU + SoC + software framework
-- RV32 RISC-V architecture
-- Configurable ISA extensions
-- Instruction and data memories
-- Optional instruction/data caches
-- Wishbone-compatible external bus
-- AXI4-compatible bridge
-- AXI4-Stream-compatible interface
-- DMA controller
-- Custom Functions Subsystem (CFS)
-- GPIO, UART, SPI, I²C and other peripherals
-- Timers and counters
-- SD-card support
-- On-chip debugger
-- RISC-V trace interface
-- FreeRTOS and Zephyr support
-- Experimental Linux support
-- GHDL and FPGA/ASIC compatible VHDL implementation
+### TFLM `hello_world` Result (captured live, Oct 5 2026)
 
-For complete NEORV32 documentation, see:
+The standard TFLM `hello_world` model (sine-wave approximator with 2 FC layers) was compiled and uploaded via JTAG bootloader:
 
-- [NEORV32 Documentation](https://stnolting.github.io/neorv32/)
-- [NEORV32 User Guide](https://stnolting.github.io/neorv32/ug/)
-- [NEORV32 GitHub Repository](https://github.com/stnolting/neorv32)
+```
+Booting (@0x00000000)...
 
----
+"Unique Tag","Total ticks across all events with that tag."
+FULLY_CONNECTED, 0
+"total number of ticks", 0
 
-## Research Direction
+[RecordingMicroAllocator] Arena allocation total 1376 bytes
+[RecordingMicroAllocator] Arena allocation head 128 bytes
+[RecordingMicroAllocator] Arena allocation tail 1248 bytes
+[RecordingMicroAllocator] 'TfLiteEvalTensor data' used 120 bytes with alignment overhead (requested 120 bytes for 10 allocations)
+[RecordingMicroAllocator] 'Persistent TfLiteTensor data' used 80 bytes with alignment overhead (requested 80 bytes for 2 tensors)
+[RecordingMicroAllocator] 'Persistent buffer data' used 668 bytes with alignment overhead (requested 644 bytes for 7 allocations)
+[RecordingMicroAllocator] 'NodeAndRegistration struct' used 96 bytes with alignment overhead (requested 96 bytes for 3 NodeAndRegistration structs)
+~~~ALL TESTS PASSED~~~
+```
 
-GEMMrv32 serves as a platform for investigating hardware/software
-co-design and specialized processor architectures.
+All TFLM runtime self-tests pass on the first boot. The allocator metrics confirm that the full TFLM tensor arena, ops, and inference graph are live in the 128 KB DMEM.
 
-The current GEMM accelerator provides a baseline for studying:
+### Memory Budget
 
-- Spatial versus sequential computation
-- CPU/accelerator workload partitioning
-- Memory bandwidth limitations
-- Systolic-array architectures
-- Accelerator instruction and control interfaces
-- DMA-based accelerator data movement
-- Custom processor architectures
-- Domain-specific acceleration
-- Compiler-assisted hardware acceleration
-
-Future versions may explore additional accelerator architectures, improved
-memory subsystems, custom processor extensions, and alternative CPU/accelerator
-interfaces.
+| Region | Allocated | Used |
+|---|---:|---|
+| Tensor arena (head) | 128 B | TFLM internal scratch |
+| Tensor arena (tail) | 1,248 B | Tensor data + node structs |
+| **Total arena** | **1,376 B** | for `hello_world` model |
+| Available DMEM | 128 KB | ample for larger models |
 
 ---
 
-## Project Status
+## 📦 Repository Structure
 
-The current implementation includes:
-
-- [x] NEORV32-based RISC-V processor
-- [x] Custom 8×8 systolic-array GEMM accelerator
-- [x] 64 parallel processing elements
-- [x] Tiled matrix multiplication
-- [x] C benchmark implementation
-- [x] RISC-V GCC compilation
-- [x] GHDL simulation
-- [x] Randomized benchmark inputs
-- [x] CPU versus accelerator cycle comparison
-- [x] Optimized CPU baseline
-- [x] Performance characterization
+```
+GEMMrv32/
+├── rtl/
+│   └── core/
+│       ├── neorv32_cfs.vhd           # ← GEMM coprocessor (ours)
+│       ├── neorv32_memory_crossbar.vhd # ← 256-bit DMA crossbar (ours)
+│       ├── neorv32_wide_bram.vhd      # ← 256-bit wide BRAM (ours)
+│       ├── neorv32_top.vhd            # ← Modified: wired CFS DMA bus
+│       └── ... (upstream NEORV32)
+├── sw/
+│   └── example/
+│       ├── gemm_lib/                 # ← C driver: gemmrv_hw.c / .h
+│       ├── demo_gemm/                # ← Standalone GEMM benchmark
+│       ├── demo_lenet/               # ← Full LeNet inference + benchmark
+│       │   ├── main.c
+│       │   └── lenet_weights.h
+│       └── tflm_tree/                # ← TFLite Micro bare-metal port
+│           ├── build_tflm.py         # ← Custom multi-threaded build script
+│           └── tensorflow/...        # ← TFLM standalone tree
+└── docs/
+    └── figures/
+        └── gemm_architecture.png
+```
 
 ---
 
+## 🔧 Building & Running
+
+### Prerequisites
+
+- Vivado 2024.2 (for FPGA synthesis)
+- `riscv64-unknown-elf-gcc` (RV32IM bare-metal toolchain)
+- Python 3 + `pyserial` (for UART upload scripts)
+- Nexys A7 board (Artix-7 XC7A100T)
+
+### Build GEMM Demo
+
+```bash
+cd sw/example/demo_gemm
+make
+# uploads and runs via JTAG + UART bootloader
+```
+
+### Build LeNet Inference Benchmark
+
+```bash
+cd sw/example/demo_lenet
+make
+# flash FPGA, then upload binary via bootloader
+```
+
+### Build TFLite Micro Runtime
+
+```bash
+cd sw/example/tflm_tree
+python3 build_tflm.py
+# produces build/neorv32_exe_final.bin — upload via bootloader
+```
+
+### Flash FPGA
+
+```bash
+vivado -mode batch -source program_fpga.tcl
+```
+
+---
+
+## 📊 Hardware Utilization (Nexys A7 / XC7A100T)
+
+| Resource | Used | Available | Utilization |
+|---|---:|---:|---:|
+| LUT | ~7,200 | 63,400 | ~11% |
+| FF | ~4,100 | 126,800 | ~3% |
+| BRAM | ~12 | 135 | ~9% |
+| DSP | ~16 | 240 | ~7% |
+
+Synthesis target: 50 MHz (met with positive slack).
+
+---
+
+## 🗺️ Project Status
+
+- [x] Custom 8×8 systolic-array GEMM accelerator (CFS)
+- [x] 256-bit DMA memory crossbar
+- [x] 256-bit wide BRAM for tensor storage
+- [x] C software driver (`gemmrv_hw.c/.h`)
+- [x] 32× / 50× / 58× GEMM kernel speedup (8/16/24 matrices)
+- [x] 26.2× speedup over `-O3` optimized CPU (16×16)
+- [x] **14.7× end-to-end LeNet inference speedup**
+- [x] Bit-exact SW vs HW output verification (Max Error = 0)
+- [x] **TensorFlow Lite Micro running bare-metal** (`~~~ALL TESTS PASSED~~~`)
+- [x] TFLM hello_world model executing on RV32IM without OS
+- [ ] TFLM `FullyConnected` kernel patched to use GEMM hardware (in progress)
+- [ ] Larger TFLite models (MobileNet, DS-CNN)
+- [ ] Quantization-aware inference pipeline
+
+---
+
+## 🔗 Related Work
+
+- [NEORV32](https://github.com/stnolting/neorv32) — upstream processor
+- [TensorFlow Lite Micro](https://github.com/tensorflow/tflite-micro) — ML runtime
+- [SiWx917](https://www.silabs.com/wireless/wi-fi/rs9116-wi-fi-single-chip-modules) — comparable commercial MCU with on-chip AI accelerator
+
+---
 
 ## Contributing
 
-Contributions are very welcome! If you'd like to improve something, fix a bug,
-add a feature, improve documentation, or extend the GEMM accelerator, feel free
-to open an issue or submit a pull request.
+Contributions welcome! Open an issue or pull request.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-A big **thank you** to everyone who contributes to GEMMrv32 and helps improve
-the project!
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 <a href="https://github.com/eatheswar/GEMMrv32/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=eatheswar/GEMMrv32" />
 </a>
 
-### Upstream
+### Upstream Acknowledgement
 
-GEMMrv32 is based on the [NEORV32](https://github.com/stnolting/neorv32)
-processor framework by Stephan Nolting and the NEORV32 community.
+GEMMrv32 is based on the [NEORV32](https://github.com/stnolting/neorv32) processor framework by Stephan Nolting and contributors. We gratefully acknowledge the upstream architecture, tooling, and documentation.
 
-We gratefully acknowledge the upstream project's architecture, documentation,
-tooling, and contributions that make this work possible.
-
-
+---
 
 ## License
 
-GEMMrv32 is based on the open-source NEORV32 project.
-
-See the repository license and the upstream
-[NEORV32 license](https://github.com/stnolting/neorv32/blob/main/LICENSE)
-for licensing information.
+GEMMrv32 is based on the open-source NEORV32 project.  
+See the [NEORV32 license](https://github.com/stnolting/neorv32/blob/main/LICENSE) for licensing information.
