@@ -1,96 +1,109 @@
-# GEMMrv32 Pure RTL: Portable Hardware IP Core Library
+# GEMMrv32: Hardware-Accelerated RISC-V SoC & Systolic Coprocessor Platform
 
-[![HDL](https://img.shields.io/badge/Language-VHDL--2008-blue?style=flat-square)]()
-[![Target](https://img.shields.io/badge/Target-Vendor--Agnostic%20FPGA%20%2F%20ASIC-brightgreen?style=flat-square)]()
 [![ISA](https://img.shields.io/badge/ISA-RV32IM%20RISC--V-green?style=flat-square)](https://riscv.org)
-[![Status](https://img.shields.io/badge/Verification-Synthesizable%20%26%20Simulation%20Tested-purple?style=flat-square)]()
+[![Hardware Accelerator](https://img.shields.io/badge/Accelerator-8x8%20Systolic%20GEMM-brightgreen?style=flat-square)]()
+[![FPGA Platforms](https://img.shields.io/badge/Platforms-Basys%203%20%7C%20Nexys%20A7-orange?style=flat-square)]()
+[![Video Architecture](https://img.shields.io/badge/Video-VGA%20160x120%20%26%20320x200%20%40%2060Hz-purple?style=flat-square)]()
 [![Author](https://img.shields.io/badge/Author-JeromeAntonyRobin-black?style=flat-square)](https://github.com/JeromeAntonyRobin)
 
-This branch contains the **pure, board-agnostic hardware RTL core IP library**. It is completely decoupled from any target FPGA board files, software source trees, or toolchain-specific build artifacts, making it immediately drop-in ready for ASIC synthesis, FPGA EDA suites (Vivado, Quartus, Libero), or RTL simulation environments (GHDL, ModelSim, VCS, Verilator).
+**GEMMrv32** is a modular, hardware-accelerated bare-metal SoC built on the [NEORV32](https://github.com/stnolting/neorv32) RISC-V processor. It extends the core with a custom **8x8 Systolic-Array GEMM Coprocessor**, a **256-bit wide DMA memory crossbar**, a **dedicated dual-port VGA rasterizer**, and a **debounced PS/2 keyboard receiver**.
+
+The repository is organized into **four specialized, decoupled branches** to serve different target platforms and research domains.
 
 ---
 
-## Branch Overview: `pure-rtl`
+## Repository Branch Directory & Portal
+
+Navigate directly to the branch tailored for your use case:
 
 ```
-rtl/
-├── core/                                # Full NEORV32 RV32IM Processor & Custom IP
-│   ├── neorv32_cfs.vhd                  # 8x8 Systolic-Array GEMM Coprocessor (CFS)
-│   ├── neorv32_memory_crossbar.vhd      # 2-Master (CPU + DMA) 256-bit Interconnect
-│   ├── neorv32_wide_bram.vhd            # 256-bit Wide Port Tensor Block RAM Buffer
-│   ├── neorv32_vga.vhd                  # Dual-Port VGA Raster Core & 12-bit Palette CLUT
-│   ├── neorv32_ps2.vhd                  # PS/2 Keyboard Receiver with Deglitch & 16B FIFO
-│   ├── neorv32_cpu.vhd                  # Core ALU, Register File, and Control Logic
-│   └── neorv32_*.vhd                    # Bus Interfaces, MTIME, UART, Timers, Caches
-├── system_integration/                  # System Busses & Packaging
-│   ├── neorv32_vivado_ip.tcl            # Vivado IP-XACT Packaging Generator
-│   ├── xbus2axi4_bridge.vhd             # NEORV32 XBUS to AXI4 Bus Protocol Bridge
-│   └── neorv32_litex_core_complex.vhd   # LiteX SoC Integration Wrapper
-sim/                                     # Simulation Testbenches
-└── neorv32_tb.vhd                       # Cycle-accurate top-level simulation testbench
+                                  GEMMrv32 Master
+                                         │
+        ┌───────────────────┬────────────┴────────────┬───────────────────┐
+        ▼                   ▼                         ▼                   ▼
+    pure-rtl              nexys                     basys              basys-doom
+ (Portable VHDL      (Nexys A7 100T            (Basys 3 35T         (Full 3D DOOM
+  Core IP Library)    TinyML SoC + LeNet)       Clean SoC + .bit)    v1, v2, v3 Suite)
 ```
+
+| Branch | Target Platform | Primary Focus & Capabilities | Jump Link |
+|---|---|---|:---:|
+| **`pure-rtl`** | **Vendor-Agnostic ASIC / FPGA** | **Pure VHDL-2008 Hardware IP Core Library**: Completely stripped of board-specific constraints and demo firmware. Contains the NEORV32 core, 8x8 systolic GEMM coprocessor (`neorv32_cfs.vhd`), 256-bit DMA crossbar, wide BRAM, VGA core, PS/2 receiver, and simulation testbenches (`sim/`). Ready for drop-in synthesis or ASIC tape-out. | [**Explore `pure-rtl`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/pure-rtl) |
+| **`nexys`** | **Digilent Nexys A7 (`xc7a100tcsg324-1`)** | **Edge AI & TinyML Platform**: Full bare-metal TensorFlow Lite Micro (TFLM) runtime tree, 23-class color classification CNN (`demo_lenet`), and GEMM benchmark achieving a **14.7x measured end-to-end hardware inference speedup**. | [**Explore `nexys`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/nexys) |
+| **`basys`** | **Digilent Basys 3 (`xc7a35tcpg236-1`)** | **Clean Basys 3 SoC Baseline**: 50.0 MHz MMCM system clock, 64 KB IMEM + 64 KB DMEM, pure Vivado batch TCL scripts (`build_basys3.tcl`, `program_jtag.tcl`, `flash_basys3.tcl`), basic bringup demos, and the **tracked bitstream** (`sw/basys/build/neorv32_basys3.bit`). | [**Explore `basys`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys) |
+| **`basys-doom`** | **Digilent Basys 3 (`xc7a35tcpg236-1`)** | **Complete 3D DOOM Workstation**: Bare-metal Id Software DOOM engine suite (v1 flat raycaster, v2 textured DOOM with 8x8 GEMM monster projection & HUD, and v3 native 320x200 BSP engine). Dual-mode input via USB-UART console and onboard PS/2 keyboard. | [**Explore `basys-doom`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys-doom) |
 
 ---
 
-## Core IP Modules & Specifications
+## System Architecture
 
-### 1. 8x8 Systolic GEMM Coprocessor (`rtl/core/neorv32_cfs.vhd`)
-* **Array Geometry:** $8 \times 8$ 2D mesh systolic array (64 processing elements).
-* **Arithmetic:** 8-bit signed integer operands with 32-bit signed accumulation ($C_{i,j} \leftarrow C_{i,j} + A_{i,k} \times B_{k,j}$).
-* **Throughput:** 64 Multiply-Accumulate (MAC) operations per clock cycle.
-* **Control Register Interface:** Memory-mapped registers via NEORV32 CFS port (`0xFFEA0000`):
-  * `REG[0..2]`: 32-bit DMA Base Addresses for Matrices $A$, $B$, and $C$.
-  * `REG[3..5]`: Row Strides for Matrices $A$, $B$, and $C$.
-  * `REG[6]`: Control / Status register (Start, Clear, Store, Status Done).
-  * `REG[7]`: Tile dimensions ($M, K, N \le 8$).
-
-### 2. 256-bit Wide DMA Interconnect Crossbar (`rtl/core/neorv32_memory_crossbar.vhd`)
-* **Bandwidth:** 256-bit wide data bus between the systolic array and tensor memory.
-* **Arbitration:** Non-blocking 2-master (CPU Wishbone + DMA), 1-slave crossbar arbiter with cycle-level round-robin priority.
-
-### 3. VGA Raster Controller (`rtl/core/neorv32_vga.vhd`)
-* **Resolution Support:**
-  * Native $160 \times 120$ @ 8bpp with 4x hardware upscaler to $640 \times 480$ @ 60 Hz (19,200 bytes dual-port VRAM).
-  * Native $320 \times 200$ @ 4bpp packed-nibble raster mode (32,000 bytes dual-port VRAM).
-* **Color Output:** 256-entry $\times$ 12-bit RGB Color Lookup Table (CLUT) mapping indices directly to 12-bit DAC outputs (4-bit R, 4-bit G, 4-bit B).
-
-### 4. Debounced PS/2 Keyboard Receiver (`rtl/core/neorv32_ps2.vhd`)
-* **Digital Filtering:** Synchronous 100 kHz deglitching filter rejecting contact bounce and line noise.
-* **Frame Decoder:** 11-bit serial frame parser (Start bit, 8 data bits, Odd Parity, Stop bit).
-* **Buffer:** 16-byte circular FIFO with status and overflow indicators.
-
----
-
-## Simulation & IP Packaging
-
-### Running Simulation (GHDL)
-```bash
-ghdl -a --std=08 rtl/core/*.vhd sim/neorv32_tb.vhd
-ghdl -e --std=08 neorv32_tb
-ghdl -r --std=08 neorv32_tb --stop-time=10ms --vcd=wave.vcd
 ```
-
-### Packaging as Vivado IP Block
-To package GEMMrv32 into a Vivado IP-XACT catalog block:
-```bash
-vivado -mode batch -source rtl/system_integration/neorv32_vivado_ip.tcl
++-----------------------------------------------------------------------------------+
+|                            GEMMrv32 SYSTEM BLOCK DIAGRAM                          |
+|                                                                                   |
+|   +---------------------------------------------------------------------------+   |
+|   |                        NEORV32 RV32IM CPU CORE                            |   |
+|   |          Instruction Cache (i-cache)  |  Cycle Counters (mcycle)          |   |
+|   +---------------------------------------------------------------------------+   |
+|          │                                                       │                |
+|          │ CFS Coprocessor Interface (0xFFEA0000)                │ Wishbone / XBUS|
+|          ▼                                                       ▼                |
+|   +---------------------------------------------------------------------------+   |
+|   |                    256-bit Wide DMA Interconnect Crossbar                 |   |
+|   +---------------------------------------------------------------------------+   |
+|          │                                   │                   │                |
+|          ▼                                   ▼                   ▼                |
+|   +--------------------------+     +-------------------+   +------------------+   |
+|   |  8x8 Systolic GEMM Unit  |     |  Dedicated 256-bit|   |  VGA Framebuffer |   |
+|   |  - 64 MAC ops/clock      |     |  Tensor BRAM      |   |  & Palette CLUT  |   |
+|   |  - 66x Vector Speedup    |     |  (Zero Stalls)    |   |  (12-bit RGB)    |   |
+|   +--------------------------+     +-------------------+   +------------------+   |
+|                                                                  │                |
+|                                                                  ▼                |
+|                                                            VGA Output (J1)        |
++-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## Technical Documentation Pointers
+## Master Memory Map
 
-* **Master Hardware Specification:** [`docs/GEMMRV32_SYSTEM_SPECIFICATION.md`](docs/GEMMRV32_SYSTEM_SPECIFICATION.md)
-  * Section 2: Address Space & Memory Mapping Architecture
+| Address Region | Size | Description | Hardware Master / Port |
+|---|:---:|---|---|
+| `0x00000000 - 0x0000FFFF` | 64 KB | **Instruction Memory (IMEM)** | CPU Fetch Bus |
+| `0x80000000 - 0x8000FFFF` | 64 KB | **Data Memory (DMEM)** | CPU Load/Store Bus |
+| `0x90000000 - 0x90004B00` | 19.2 KB | **VGA Dual-Port Framebuffer** (160x120 @ 8bpp) | XBUS Slave / Raster Scanout Port |
+| `0x90010000 - 0x900103FF` | 1 KB | **VGA Color Palette (CLUT)** (256 entries x 12-bit RGB) | XBUS Slave / DAC Output Stage |
+| `0x90020000 - 0x9002000F` | 16 B | **PS/2 Keyboard Receiver FIFO** | XBUS Slave |
+| `0xFFEA0000 - 0xFFEA001F` | 32 B | **8x8 Systolic GEMM Control Registers** | CFS Memory-Mapped Port |
+| `0xFFFFFE00 - 0xFFFFFFFF` | 512 B | **NEORV32 Internal Bootloader ROM** | CPU Fetch Bus |
+
+---
+
+## Technical Documentation Suite
+
+The complete engineering documentation is located in [`docs/`](docs/):
+
+* **[`docs/GEMMRV32_SYSTEM_SPECIFICATION.md`](docs/GEMMRV32_SYSTEM_SPECIFICATION.md)**:
+  * Section 1: System-Level Overview & High-Level Block Diagram
+  * Section 2: Complete Address & Memory Architecture
   * Section 3: Hardware Peripheral & Coprocessor VHDL Specifications
-  * Section 6.1: The 32-bit vs 8-bit VRAM Write Anomaly & Resolution
+  * Section 4: Hardware Coprocessor Drivers & C API
+  * Section 5: Portability & Reproducibility Guide for Basys 3
+  * **Section 6.1: The 32-bit vs 8-bit VRAM Write Ghosting Anomaly & Resolution**
+  * **Section 6.2: The DOOM v3 4bpp Stride, Write-Only Bus Trap & Hall-of-Mirrors Glitch**
+* **[`docs/DOOM_GRAPHICS_PIPELINE.md`](docs/DOOM_GRAPHICS_PIPELINE.md)**:
+  * Bare-metal 3D raycasting DDA math, texture coordinate mapping, 1D Z-Buffer, and Id Software BSP treelinedef architecture.
+* **[`docs/HARDWARE_DEBUG_REPORT.md`](docs/HARDWARE_DEBUG_REPORT.md)**:
+  * Detailed diagnostic report resolving the `ERROR_EXCEPTION 0x7 0xFFE006A8` bootloader framing exception and UART streaming synchronization.
 
 ---
 
-## Repository Branch Directory
+## Reproducibility & Portability
 
-* [`master`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/master): Main index and baseline repository snapshot.
-* [`pure-rtl`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/pure-rtl): **(You are here)** Board-agnostic VHDL core IP library.
-* [`nexys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/nexys): Digilent Nexys A7 100T TinyML platform with TensorFlow Lite Micro & LeNet.
-* [`basys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys): Clean Basys 3 SoC baseline with tracked bitstream and pure TCL flow.
-* [`basys-doom`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys-doom): Complete 3D DOOM gaming platform.
+1. **Pure TCL Automation:** Zero Windows-specific `.ps1` or `.bat` dependencies in the synthesis tree. Batch synthesis and hardware programming run through native Vivado TCL scripts:
+   * `sw/basys/build_basys3.tcl` (batch synthesis & bitstream export)
+   * `sw/basys/program_jtag.tcl` (1-click JTAG programming of tracked `neorv32_basys3.bit`)
+   * `sw/basys/flash_basys3.tcl` (non-volatile SPI flash programming)
+2. **Standard RISC-V GCC Toolchain:** Compiles with any standard `rv32im_zicsr_zifencei` toolchain using relative, portable makefiles.
+3. **Tracked Hardware Bitstreams:** Pre-synthesized bitstreams are version-controlled directly in Git, allowing immediate hardware testing on physical Basys 3 boards without awaiting local synthesis.
