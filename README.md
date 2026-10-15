@@ -10,7 +10,7 @@ A clean, production-ready bare-metal SoC implementation of the **NEORV32 RISC-V 
 
 ---
 
-## Branch Overview: `basys`
+## Branch Overview: `basys3`
 
 This branch contains the **clean Basys 3 SoC baseline**, including board wrappers, constraints, pure Vivado batch TCL scripts, the **pre-synthesized tracked bitstream**, and standard hardware bringup demos.
 
@@ -106,8 +106,9 @@ Compile with bare-metal RISC-V GCC (`riscv64-unknown-elf-gcc`):
 
 ## Repository Branch Directory
 
-* [`master`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/master): Main index and baseline repository snapshot.
-* [`pure-rtl`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/pure-rtl): Board-agnostic VHDL core IP library (NEORV32 + GEMM + DMA + VGA + PS/2).
-* [`nexys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/nexys): Digilent Nexys A7 100T TinyML platform with TensorFlow Lite Micro & LeNet.
-* [`basys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys): **(You are here)** Clean Basys 3 SoC baseline with tracked bitstream and pure TCL flow.
-* [`basys-doom`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys-doom): Complete 3D DOOM gaming platform.
+* [`master`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/master): Pure portable VHDL IP core library (NEORV32 + GEMM + DMA + VGA + PS/2).
+* [`basys3`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/basys3): **(You are here)** Clean Basys 3 SoC baseline with tracked bitstream and pure TCL flow.
+* [`nexysa7`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/nexysa7): Digilent Nexys A7 100T TinyML platform with TensorFlow Lite Micro & LeNet.
+
+> [!NOTE]
+> The standalone bare-metal 3D DOOM workstation is available in [**DOOM-on-GEMMrv32**](https://github.com/JeromeAntonyRobin/DOOM-on-GEMMrv32).
