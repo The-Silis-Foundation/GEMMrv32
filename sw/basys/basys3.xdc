@@ -78,3 +78,19 @@ set_property CONFIG_MODE SPIx4 [current_design]
 set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+
+################################################################################
+## Memory Synthesis Optimization Constraints (LUTRAM & Flip-Flop Synthesis)
+################################################################################
+
+## 1. Force Bootloader ROM to Distributed LUT ROM (frees up 2x RAMB36 Block RAMs)
+set_property ROM_STYLE distributed [get_cells -hier -filter {NAME =~ *bootrom*}]
+
+## 2. Force VGA Color Palette CLUT to Flip-Flop Registers / Distributed RAM
+set_property RAM_STYLE registers [get_cells -hier -filter {NAME =~ *vga* && (NAME =~ *palette* || NAME =~ *clut*)}]
+
+## 3. Force Peripheral Buffers & FIFOs to Distributed LUTRAM
+set_property RAM_STYLE distributed [get_cells -hier -filter {NAME =~ *fifo* || NAME =~ *buf_mem*}]
+
+## 4. Allow Distributed RAM mapping for small/scratchpad memory structures
+set_property RAM_STYLE distributed [get_cells -hier -filter {NAME =~ *dram* || NAME =~ *dist_mem* || NAME =~ *scratchpad*}]
