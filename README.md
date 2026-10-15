@@ -12,7 +12,7 @@ The system is verified on a **Digilent Nexys A7 FPGA (Artix-7 XC7A100T)** and ac
 
 ---
 
-## Branch Overview: `nexys`
+## Branch Overview: `nexysa7`
 
 This branch contains the **Edge AI & TinyML reference system**, including the bare-metal TensorFlow Lite Micro runtime tree, the LeNet 23-class color classifier demo, and cycle-accurate benchmarks.
 
@@ -94,8 +94,9 @@ Measured live on FPGA hardware using RISC-V hardware performance counter CSRs (`
 
 ## Repository Branch Directory
 
-* [`master`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/master): Main index and baseline repository snapshot.
-* [`pure-rtl`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/pure-rtl): Board-agnostic VHDL core IP library (NEORV32 + GEMM + DMA + VGA + PS/2).
-* [`nexys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/nexys): **(You are here)** Digilent Nexys A7 100T TinyML platform with TensorFlow Lite Micro & LeNet.
-* [`basys`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys): Clean Basys 3 SoC baseline with tracked bitstream and pure TCL flow.
-* [`basys-doom`](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys-doom): Complete 3D DOOM gaming platform.
+* [`master`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/master): Pure portable VHDL IP core library (NEORV32 + GEMM + DMA + VGA + PS/2).
+* [`basys3`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/basys3): Clean Basys 3 SoC baseline with tracked bitstream and pure TCL flow.
+* [`nexysa7`](https://github.com/The-Silis-Foundation/GEMMrv32/tree/nexysa7): **(You are here)** Digilent Nexys A7 100T TinyML platform with TensorFlow Lite Micro & LeNet.
+
+> [!NOTE]
+> The standalone bare-metal 3D DOOM workstation is available in [**DOOM-on-GEMMrv32**](https://github.com/JeromeAntonyRobin/DOOM-on-GEMMrv32).
