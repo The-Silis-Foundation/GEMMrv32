@@ -11,7 +11,7 @@ use neorv32.neorv32_package.all;
 entity neorv32_basys3_top is
   generic (
     CLOCK_FREQUENCY : natural := 50000000;  -- 50 MHz clock for NEORV32
-    IMEM_SIZE       : natural := 96*1024;   -- 96 KB IMEM (24 RAMB36)
+    IMEM_SIZE       : natural := 64*1024;   -- 64 KB IMEM (16 RAMB36, exact power-of-two)
     DMEM_SIZE       : natural := 96*1024    -- 96 KB DMEM (24 RAMB36)
   );
   port (

@@ -92,8 +92,5 @@ set_property RAM_STYLE registers [get_cells -hier -filter {NAME =~ *vga* && (NAM
 ## 3. Force Peripheral Buffers & FIFOs to Distributed LUTRAM
 set_property RAM_STYLE distributed [get_cells -hier -filter {NAME =~ *fifo* || NAME =~ *buf_mem*}]
 
-## 4. Allow Distributed RAM mapping for small/scratchpad memory structures
-set_property RAM_STYLE distributed [get_cells -hier -filter {NAME =~ *dram* || NAME =~ *dist_mem* || NAME =~ *scratchpad*}]
-
-## 5. Force VGA Framebuffer (19,200 bytes) to Distributed LUTRAM (frees 5x RAMB36 Block RAMs)
+## 4. Force VGA Framebuffer (19,200 bytes) to Distributed LUTRAM (frees 5x RAMB36 Block RAMs)
 set_property RAM_STYLE distributed [get_cells -hier -filter {NAME =~ *vga* && NAME =~ *vram*}]
