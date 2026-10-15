@@ -23,7 +23,9 @@ def upload_and_run(port='COM10', baud=19200, bin_path=r'C:\Users\Lenovo\.gemini\
         ser.reset_input_buffer()
         print("Waiting for bootloader prompt or sending reset/abort...")
         
-        # Send newlines / abort chars
+        # Send reboot command in case application is currently running
+        ser.write(b'b\r\n')
+        time.sleep(0.3)
         ser.write(b'\r\n')
         time.sleep(0.2)
         ser.write(b'h\r\n')
