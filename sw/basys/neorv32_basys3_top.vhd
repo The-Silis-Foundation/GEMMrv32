@@ -11,8 +11,8 @@ use neorv32.neorv32_package.all;
 entity neorv32_basys3_top is
   generic (
     CLOCK_FREQUENCY : natural := 50000000;  -- 50 MHz clock for NEORV32
-    IMEM_SIZE       : natural := 64*1024;   -- 64 KB IMEM (16 RAMB36, exact power-of-two)
-    DMEM_SIZE       : natural := 96*1024    -- 96 KB DMEM (24 RAMB36)
+    IMEM_SIZE       : natural := 32*1024;   -- 32 KB IMEM (8 RAMB36, exact power-of-two)
+    DMEM_SIZE       : natural := 96*1024    -- 96 KB DMEM (24 RAMB36, total BRAM with 16 VRAM = 48/50)
   );
   port (
     -- 100 MHz oscillator on Basys 3 (pin W5)
