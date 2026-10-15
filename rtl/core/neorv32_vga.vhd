@@ -64,11 +64,11 @@ architecture rtl of neorv32_vga is
   signal pixel_y     : integer range 0 to 119 := 0;
   signal vram_raddr  : unsigned(14 downto 0) := (others => '0');
 
-  -- 19,200 bytes Framebuffer (Dual-Port BRAM inference)
+  -- 19,200 bytes Framebuffer (Dual-Port Distributed LUTRAM inference)
   type vram_t is array (0 to 19199) of std_ulogic_vector(7 downto 0);
   signal vram        : vram_t := (others => (others => '0'));
   attribute ram_style : string;
-  attribute ram_style of vram : signal is "block";
+  attribute ram_style of vram : signal is "distributed";
   signal pixel_idx   : std_ulogic_vector(7 downto 0) := (others => '0');
 
   -- 256-entry x 12-bit RGB Color Palette (CLUT)

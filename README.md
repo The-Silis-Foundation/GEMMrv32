@@ -18,13 +18,13 @@ This branch contains the **clean Basys 3 SoC baseline**, including board wrapper
 +-----------------------------------------------------------------------------------+
 |                        NEORV32 BASYS 3 SoC MEMORY MAP                            |
 |                                                                                   |
-|  0x00000000 - 0x0000FFFF : 64 KB Instruction Memory (IMEM, on-chip BRAM)          |
-|  0x80000000 - 0x8000FFFF : 64 KB Data Memory (DMEM, on-chip BRAM)                 |
-|  0x90000000 - 0x90004B00 : 19,200 Bytes Dual-Port VGA Framebuffer (160x120 @ 8bpp)|
-|  0x90010000 - 0x900103FF : 256 x 12-bit RGB Color Lookup Table (Palette CLUT)    |
+|  0x00000000 - 0x00017FFF : 96 KB Instruction Memory (IMEM, 24x BRAM36)            |
+|  0x80000000 - 0x80017FFF : 96 KB Data Memory (DMEM, 24x BRAM36 Wide 256-bit)     |
+|  0x90000000 - 0x90004B00 : 19,200 Bytes Dual-Port VGA Framebuffer (LUTRAM)        |
+|  0x90010000 - 0x900103FF : 256 x 12-bit RGB Color Lookup Table (Registers)        |
 |  0x90020000 - 0x9002000F : Debounced PS/2 Keyboard Controller FIFO               |
 |  0xFFEA0000 - 0xFFEA001F : Custom 8x8 Systolic GEMM Coprocessor Registers (CFS) |
-|  0xFFFFFE00 - 0xFFFFFFFF : NEORV32 Internal Bootloader ROM                        |
+|  0xFFFFFE00 - 0xFFFFFFFF : NEORV32 Internal Bootloader ROM (Distributed LUT ROM)   |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -32,12 +32,12 @@ This branch contains the **clean Basys 3 SoC baseline**, including board wrapper
 
 ## Hardware Utilization on Artix-7 35T
 
-Implementation report from Vivado batch implementation on `xc7a35tcpg236-1`:
+Implementation architecture for `xc7a35tcpg236-1` with 192 KB CPU Block RAM and Distributed LUTRAM VRAM:
 
 | Resource Type | Used | Total Available | Utilization % | Architectural Notes |
 |---|:---:|:---:|:---:|---|
-| **Block RAM (BRAM36)** | **43.5** | **50** | **87.0%** | IMEM (16), DMEM (16), DMA (8), VRAM (5), FIFOs (1) |
-| **Slice LUTs** | **9,420** | **20,800** | **45.3%** | Logic, 8x8 systolic multiplier cells, memory crossbar |
+| **Block RAM (BRAM36)** | **48.0** | **50** | **96.0%** | IMEM (24), DMEM (24), zero BRAM for VRAM/ROM |
+| **Slice LUTs** | **~10,580** | **20,800** | **~50.8%** | Logic, 8x8 systolic multiplier cells, 2.4K LUTRAM VRAM |
 | **Slice Registers** | **5,910** | **41,600** | **14.2%** | Pipeline stages, DMA counters, Wishbone registers |
 | **DSP48E1 Slices** | **0** | **90** | **0.0%** | Synthesizer heuristic maps 8-bit signed multipliers to LUTs |
 | **MMCM / PLL** | **1** | **5** | **20.0%** | Generates locked 50.0 MHz system clock from 100 MHz oscillator |
