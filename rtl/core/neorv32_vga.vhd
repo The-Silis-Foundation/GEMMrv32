@@ -42,8 +42,8 @@ end entity;
 
 architecture rtl of neorv32_vga is
 
-  -- 25 MHz pixel clock strobe from 50 MHz clk_i
-  signal pclk_div     : std_ulogic := '0';
+  -- 25 MHz pixel clock strobe from 100 MHz clk_i (div 4)
+  signal pclk_cnt     : unsigned(1 downto 0) := (others => '0');
   signal pclk_tick    : std_ulogic;
 
   -- 640x480 @ 60 Hz Timing Parameters
@@ -100,26 +100,30 @@ architecture rtl of neorv32_vga is
   );
   signal rgb_color    : std_ulogic_vector(11 downto 0) := (others => '0');
 
-  -- Pipelined signals matching BRAM & Palette latency (2 cycles)
+  -- Pipelined signals matching BRAM & Palette latency (3 cycles at 100 MHz)
+  signal vram_rdata_b_pipe : std_ulogic_vector(7 downto 0) := (others => '0');
   signal active_d1    : boolean := false;
   signal active_d2    : boolean := false;
+  signal active_d3    : boolean := false;
   signal hsync_d1     : std_ulogic := '1';
   signal hsync_d2     : std_ulogic := '1';
+  signal hsync_d3     : std_ulogic := '1';
   signal vsync_d1     : std_ulogic := '1';
   signal vsync_d2     : std_ulogic := '1';
+  signal vsync_d3     : std_ulogic := '1';
 
 begin
 
-  -- Generate 25 MHz pixel enable tick from 50 MHz system clock
+  -- Generate 25 MHz pixel enable tick from 100 MHz system clock (divide by 4)
   process(clk_i, rstn_i)
   begin
     if rstn_i = '0' then
-      pclk_div <= '0';
+      pclk_cnt <= (others => '0');
     elsif rising_edge(clk_i) then
-      pclk_div <= not pclk_div;
+      pclk_cnt <= pclk_cnt + 1;
     end if;
   end process;
-  pclk_tick <= pclk_div;
+  pclk_tick <= '1' when (pclk_cnt = "11") else '0';
 
   -- VGA Sync Generator (640x480 @ 60Hz standard timing)
   process(clk_i, rstn_i)
@@ -234,16 +238,20 @@ begin
       else
         vram_rdata_b <= (others => '0');
       end if;
+      vram_rdata_b_pipe <= vram_rdata_b;
 
-      -- Pipeline active display enable matching the 2-cycle read latency (BRAM + CLUT)
+      -- Pipeline active display enable matching the 3-cycle read latency (BRAM + Reg + CLUT)
       active_d1 <= active_area and active_doom;
       active_d2 <= active_d1;
+      active_d3 <= active_d2;
 
       -- Pipeline sync pulses to match pixel data latency exactly
       hsync_d1  <= hsync_reg;
       hsync_d2  <= hsync_d1;
+      hsync_d3  <= hsync_d2;
       vsync_d1  <= vsync_reg;
       vsync_d2  <= vsync_d1;
+      vsync_d3  <= vsync_d2;
     end if;
   end process;
 
@@ -258,8 +266,8 @@ begin
         palette_mem(pal_idx) <= bus_wdata_i(11 downto 0);
       end if;
 
-      -- Palette Lookup for raster scan (256-color lookup from 8bpp native pixel)
-      rgb_color <= palette_mem(to_integer(unsigned(vram_rdata_b)));
+      -- Palette Lookup for raster scan (256-color lookup from pipelined 8bpp native pixel)
+      rgb_color <= palette_mem(to_integer(unsigned(vram_rdata_b_pipe)));
     end if;
   end process;
 
@@ -277,11 +285,11 @@ begin
   end process;
 
   -- Final DAC Output Mapping with Blanking & Letterbox Border
-  vga_hsync_o <= hsync_d2;
-  vga_vsync_o <= vsync_d2;
+  vga_hsync_o <= hsync_d3;
+  vga_vsync_o <= vsync_d3;
 
-  vga_red_o   <= rgb_color(11 downto 8) when active_d2 else (others => '0');
-  vga_green_o <= rgb_color(7 downto 4)  when active_d2 else (others => '0');
-  vga_blue_o  <= rgb_color(3 downto 0)  when active_d2 else (others => '0');
+  vga_red_o   <= rgb_color(11 downto 8) when active_d3 else (others => '0');
+  vga_green_o <= rgb_color(7 downto 4)  when active_d3 else (others => '0');
+  vga_blue_o  <= rgb_color(3 downto 0)  when active_d3 else (others => '0');
 
 end architecture;

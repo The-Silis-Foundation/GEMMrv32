@@ -10,7 +10,7 @@ use neorv32.neorv32_package.all;
 
 entity neorv32_basys3_top is
   generic (
-    CLOCK_FREQUENCY : natural := 50000000;  -- 50 MHz clock for NEORV32
+    CLOCK_FREQUENCY : natural := 100000000; -- 100 MHz clock for NEORV32
     IMEM_SIZE       : natural := 32*1024;   -- 32 KB IMEM (8 RAMB36, exact power-of-two)
     DMEM_SIZE       : natural := 96*1024    -- 96 KB DMEM (24 RAMB36, total BRAM with 16 VRAM = 48/50)
   );
@@ -71,14 +71,14 @@ architecture rtl of neorv32_basys3_top is
 
 begin
 
-  -- Dedicated 7-series MMCME2 primitive: 100 MHz in -> 50 MHz global clock out
+  -- Dedicated 7-series MMCME2 primitive: 100 MHz in -> 100 MHz global clock out
   mmcm_inst : MMCME2_BASE
   generic map (
     BANDWIDTH          => "OPTIMIZED",
     CLKFBOUT_MULT_F    => 10.0,
     CLKFBOUT_PHASE     => 0.0,
     CLKIN1_PERIOD      => 10.0,
-    CLKOUT0_DIVIDE_F   => 20.0,
+    CLKOUT0_DIVIDE_F   => 10.0,
     CLKOUT0_DUTY_CYCLE => 0.5,
     CLKOUT0_PHASE      => 0.0,
     DIVCLK_DIVIDE      => 1,
