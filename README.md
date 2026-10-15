@@ -8,7 +8,7 @@
 
 **GEMMrv32** is a modular, hardware-accelerated bare-metal SoC built on the [NEORV32](https://github.com/stnolting/neorv32) RISC-V processor. It extends the core with a custom **8x8 Systolic-Array GEMM Coprocessor**, a **256-bit wide DMA memory crossbar**, a **dedicated dual-port VGA rasterizer**, and a **debounced PS/2 keyboard receiver**.
 
-The repository is organized into **four specialized, decoupled branches** to serve different target platforms and research domains.
+The repository is organized into **three specialized, decoupled branches** to serve different target platforms and research domains.
 
 ---
 
@@ -18,20 +18,23 @@ Navigate directly to the branch tailored for your use case:
 
 ```
                                   GEMMrv32 Master
+                                  (Pure VHDL Core)
                                          │
-        ┌───────────────────┬────────────┴────────────┬───────────────────┐
-        ▼                   ▼                         ▼                   ▼
-    pure-rtl              nexys                     basys              basys-doom
- (Portable VHDL      (Nexys A7 100T            (Basys 3 35T         (Full 3D DOOM
-  Core IP Library)    TinyML SoC + LeNet)       Clean SoC + .bit)    v1, v2, v3 Suite)
+                        ┌────────────────┴────────────────┐
+                        ▼                                 ▼
+                     basys3                            nexysa7
+                  (Basys 3 35T                     (Nexys A7 100T
+                Clean SoC + .bit)                TinyML SoC + LeNet)
 ```
 
 | Branch | Target Platform | Primary Focus & Capabilities | Jump Link |
 |---|---|---|:---:|
-| **`pure-rtl`** | **Vendor-Agnostic ASIC / FPGA** | **Pure VHDL-2008 Hardware IP Core Library**: Completely stripped of board-specific constraints and demo firmware. Contains the NEORV32 core, 8x8 systolic GEMM coprocessor (`neorv32_cfs.vhd`), 256-bit DMA crossbar, wide BRAM, VGA core, PS/2 receiver, and simulation testbenches (`sim/`). Ready for drop-in synthesis or ASIC tape-out. | [**Explore `pure-rtl`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/pure-rtl) |
-| **`nexys`** | **Digilent Nexys A7 (`xc7a100tcsg324-1`)** | **Edge AI & TinyML Platform**: Full bare-metal TensorFlow Lite Micro (TFLM) runtime tree, 23-class color classification CNN (`demo_lenet`), and GEMM benchmark achieving a **14.7x measured end-to-end hardware inference speedup**. | [**Explore `nexys`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/nexys) |
-| **`basys`** | **Digilent Basys 3 (`xc7a35tcpg236-1`)** | **Clean Basys 3 SoC Baseline**: 50.0 MHz MMCM system clock, 64 KB IMEM + 64 KB DMEM, pure Vivado batch TCL scripts (`build_basys3.tcl`, `program_jtag.tcl`, `flash_basys3.tcl`), basic bringup demos, and the **tracked bitstream** (`sw/basys/build/neorv32_basys3.bit`). | [**Explore `basys`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys) |
-| **`basys-doom`** | **Digilent Basys 3 (`xc7a35tcpg236-1`)** | **Complete 3D DOOM Workstation**: Bare-metal Id Software DOOM engine suite (v1 flat raycaster, v2 textured DOOM with 8x8 GEMM monster projection & HUD, and v3 native 320x200 BSP engine). Dual-mode input via USB-UART console and onboard PS/2 keyboard. | [**Explore `basys-doom`**](https://github.com/JeromeAntonyRobin/GEMMPrivate/tree/basys-doom) |
+| **`master`** | **Vendor-Agnostic ASIC / FPGA** | **Pure VHDL-2008 Hardware IP Core Library**: Completely stripped of board-specific constraints and demo firmware. Contains the NEORV32 core, 8x8 systolic GEMM coprocessor (`neorv32_cfs.vhd`), 256-bit DMA crossbar, wide BRAM, VGA core, PS/2 receiver, and simulation testbenches (`sim/`). Ready for drop-in synthesis or ASIC tape-out. | [**Explore `master`**](https://github.com/The-Silis-Foundation/GEMMrv32/tree/master) |
+| **`basys3`** | **Digilent Basys 3 (`xc7a35tcpg236-1`)** | **Clean Basys 3 SoC Baseline**: 50.0 MHz MMCM system clock, 64 KB IMEM + 64 KB DMEM, pure Vivado batch TCL scripts (`build_basys3.tcl`, `program_jtag.tcl`, `flash_basys3.tcl`), basic bringup demos, and the **tracked bitstream** (`sw/basys/build/neorv32_basys3.bit`). | [**Explore `basys3`**](https://github.com/The-Silis-Foundation/GEMMrv32/tree/basys3) |
+| **`nexysa7`** | **Digilent Nexys A7 (`xc7a100tcsg324-1`)** | **Edge AI & TinyML Platform**: Full bare-metal TensorFlow Lite Micro (TFLM) runtime tree, 23-class color classification CNN (`demo_lenet`), and GEMM benchmark achieving a **14.7x measured end-to-end hardware inference speedup**. | [**Explore `nexysa7`**](https://github.com/The-Silis-Foundation/GEMMrv32/tree/nexysa7) |
+
+> [!NOTE]
+> The bare-metal 3D DOOM workstation has been decoupled into its dedicated repository: [**DOOM-on-GEMMrv32**](https://github.com/JeromeAntonyRobin/DOOM-on-GEMMrv32), which links the `basys3` hardware SoC platform as a git submodule.
 
 ---
 
