@@ -67,14 +67,22 @@ architecture rtl of neorv32_vga is
   signal pixel_y      : integer range 0 to 199 := 0;
   signal vram_raddr   : unsigned(15 downto 0) := (others => '0');
 
-  -- 64,000 bytes Framebuffer (Native 320x200 @ 8bpp Mode 13h: 16x RAMB36)
-  type vram_t is array (0 to 63999) of std_ulogic_vector(7 downto 0);
-  signal vram         : vram_t := (others => (others => '0'));
+  -- 64,000 bytes Framebuffer across 4 byte lanes (True 32-bit Word Writes + Byte Writes)
+  -- 4 lanes x 16,000 bytes = 64,000 bytes (Native 320x200 @ 8bpp Mode 13h: 16x RAMB36)
+  type vram_lane_t is array (0 to 15999) of std_ulogic_vector(7 downto 0);
+  signal vram_b0      : vram_lane_t := (others => (others => '0'));
+  signal vram_b1      : vram_lane_t := (others => (others => '0'));
+  signal vram_b2      : vram_lane_t := (others => (others => '0'));
+  signal vram_b3      : vram_lane_t := (others => (others => '0'));
   attribute ram_style : string;
-  attribute ram_style of vram : signal is "block";
+  attribute ram_style of vram_b0 : signal is "block";
+  attribute ram_style of vram_b1 : signal is "block";
+  attribute ram_style of vram_b2 : signal is "block";
+  attribute ram_style of vram_b3 : signal is "block";
 
-  signal vram_rdata_b : std_ulogic_vector(7 downto 0) := (others => '0');
-  signal vram_rdata_a : std_ulogic_vector(7 downto 0) := (others => '0');
+  signal vram_rdata_a0, vram_rdata_a1, vram_rdata_a2, vram_rdata_a3 : std_ulogic_vector(7 downto 0) := (others => '0');
+  signal vram_rdata_b0, vram_rdata_b1, vram_rdata_b2, vram_rdata_b3 : std_ulogic_vector(7 downto 0) := (others => '0');
+  signal scan_sel_d1  : std_ulogic_vector(1 downto 0) := "00";
 
   -- 256-entry x 12-bit RGB Color Palette (CLUT)
   type palette_t is array (0 to 255) of std_ulogic_vector(11 downto 0);
@@ -202,45 +210,73 @@ begin
 
   -- Framebuffer Dual-Port Read / Write Process
   process(clk_i)
-    variable byte_addr_w : integer range 0 to 65535;
-    variable byte_addr_r : integer range 0 to 65535;
+    variable word_addr_w   : integer range 0 to 16383;
+    variable word_addr_r   : integer range 0 to 16383;
+    variable scan_word_addr : integer range 0 to 16383;
   begin
     if rising_edge(clk_i) then
       -- -------------------------------------------------------------
-      -- Port A: CPU Bus Reads & Writes
+      -- Port A: CPU Bus Reads & Writes (Parallel 32-bit Word + Byte Lane Steering)
       -- -------------------------------------------------------------
       if bus_addr_i(16) = '0' then
-        byte_addr_r := to_integer(unsigned(bus_addr_i(15 downto 0)));
-        if byte_addr_r < 64000 then
-          vram_rdata_a <= vram(byte_addr_r);
+        word_addr_r := to_integer(unsigned(bus_addr_i(15 downto 2)));
+        if word_addr_r < 16000 then
+          vram_rdata_a0 <= vram_b0(word_addr_r);
+          vram_rdata_a1 <= vram_b1(word_addr_r);
+          vram_rdata_a2 <= vram_b2(word_addr_r);
+          vram_rdata_a3 <= vram_b3(word_addr_r);
         else
-          vram_rdata_a <= (others => '0');
+          vram_rdata_a0 <= (others => '0');
+          vram_rdata_a1 <= (others => '0');
+          vram_rdata_a2 <= (others => '0');
+          vram_rdata_a3 <= (others => '0');
         end if;
       end if;
 
       if bus_we_i = '1' and bus_addr_i(16) = '0' then
-        byte_addr_w := to_integer(unsigned(bus_addr_i(15 downto 0)));
-        if byte_addr_w < 64000 then
-          case bus_addr_i(1 downto 0) is
-            when "00"   => vram(byte_addr_w) <= bus_wdata_i(7 downto 0);
-            when "01"   => vram(byte_addr_w) <= bus_wdata_i(15 downto 8);
-            when "10"   => vram(byte_addr_w) <= bus_wdata_i(23 downto 16);
-            when others => vram(byte_addr_w) <= bus_wdata_i(31 downto 24);
-          end case;
+        word_addr_w := to_integer(unsigned(bus_addr_i(15 downto 2)));
+        if word_addr_w < 16000 then
+          if bus_ben_i(0) = '1' then
+            vram_b0(word_addr_w) <= bus_wdata_i(7 downto 0);
+          end if;
+          if bus_ben_i(1) = '1' then
+            vram_b1(word_addr_w) <= bus_wdata_i(15 downto 8);
+          end if;
+          if bus_ben_i(2) = '1' then
+            vram_b2(word_addr_w) <= bus_wdata_i(23 downto 16);
+          end if;
+          if bus_ben_i(3) = '1' then
+            vram_b3(word_addr_w) <= bus_wdata_i(31 downto 24);
+          end if;
         end if;
       end if;
 
       -- -------------------------------------------------------------
-      -- Port B: VGA Scanout Read (synchronous BRAM access)
+      -- Port B: VGA Scanout Read (synchronous 4-lane BRAM access)
       -- -------------------------------------------------------------
-      if to_integer(vram_raddr) < 64000 then
-        vram_rdata_b <= vram(to_integer(vram_raddr));
+      scan_word_addr := to_integer(vram_raddr(15 downto 2));
+      if scan_word_addr < 16000 then
+        vram_rdata_b0 <= vram_b0(scan_word_addr);
+        vram_rdata_b1 <= vram_b1(scan_word_addr);
+        vram_rdata_b2 <= vram_b2(scan_word_addr);
+        vram_rdata_b3 <= vram_b3(scan_word_addr);
       else
-        vram_rdata_b <= (others => '0');
+        vram_rdata_b0 <= (others => '0');
+        vram_rdata_b1 <= (others => '0');
+        vram_rdata_b2 <= (others => '0');
+        vram_rdata_b3 <= (others => '0');
       end if;
-      vram_rdata_b_pipe <= vram_rdata_b;
+      scan_sel_d1 <= std_ulogic_vector(vram_raddr(1 downto 0));
 
-      -- Pipeline active display enable matching the 3-cycle read latency (BRAM + Reg + CLUT)
+      -- Pixel Multiplexer into pipeline matching 3-cycle DAC latency
+      case scan_sel_d1 is
+        when "00"   => vram_rdata_b_pipe <= vram_rdata_b0;
+        when "01"   => vram_rdata_b_pipe <= vram_rdata_b1;
+        when "10"   => vram_rdata_b_pipe <= vram_rdata_b2;
+        when others => vram_rdata_b_pipe <= vram_rdata_b3;
+      end case;
+
+      -- Pipeline active display enable matching the 3-cycle read latency (BRAM + Mux + CLUT)
       active_d1 <= active_area and active_doom;
       active_d2 <= active_d1;
       active_d3 <= active_d2;
@@ -272,12 +308,12 @@ begin
   end process;
 
   -- MMIO Bus Read Response
-  process(bus_addr_i, in_vblank, vram_rdata_a)
+  process(bus_addr_i, in_vblank, vram_rdata_a0, vram_rdata_a1, vram_rdata_a2, vram_rdata_a3)
   begin
     bus_rdata_o <= (others => '0');
     if bus_addr_i(16) = '0' then
-      -- Replicate read byte across all 4 byte lanes for transparent unaligned lb/lbu support
-      bus_rdata_o <= vram_rdata_a & vram_rdata_a & vram_rdata_a & vram_rdata_a;
+      -- Full 32-bit aligned word read
+      bus_rdata_o <= vram_rdata_a3 & vram_rdata_a2 & vram_rdata_a1 & vram_rdata_a0;
     elsif bus_addr_i(16) = '1' and bus_addr_i(10) = '1' then
       -- Status register (0x10400): [0] in_vblank
       bus_rdata_o(0) <= in_vblank;
