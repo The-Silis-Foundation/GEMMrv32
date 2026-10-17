@@ -190,7 +190,7 @@ begin
   -- -------------------------------------------------------------------------------------------
   request_reg: process(rstn_i, clk_i)
   begin
-    if (rstn_i = '0') then
+    if (rstn_i = '0') then -- full reset required
       device_req_o <= req_terminate_c;
     elsif rising_edge(clk_i) then
       if (host_req_i.stb = '1') then -- reduce switching activity on downstream bus system
@@ -205,21 +205,11 @@ begin
 
   -- Response Register Stage ----------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  response_reg_reset: process(rstn_i, clk_i)
+  response_reg: process(clk_i)
   begin
-    if (rstn_i = '0') then -- full reset for control signals
-      host_rsp_o.ack <= '0';
-      host_rsp_o.err <= '0';
-    elsif rising_edge(clk_i) then
-      host_rsp_o.ack <= device_rsp_i.ack;
-      host_rsp_o.err <= device_rsp_i.err;
-    end if;
-  end process;
-
-  -- no reset required --
-  response_reg_noreset: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
+    if rising_edge(clk_i) then -- no reset required
+      host_rsp_o.ack  <= device_rsp_i.ack;
+      host_rsp_o.err  <= device_rsp_i.err;
       host_rsp_o.data <= device_rsp_i.data;
     end if;
   end process;
@@ -993,10 +983,13 @@ begin
 
   -- System Bus Interface -------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  bus_request: process(core_req_i, sc, sc_valid)
+  -- [NOTE] the SC decision has to stay stable for the entire bus transfer: the reservation is
+  -- updated with the request strobe, so sc_valid is only meaningful in the STB cycle; afterwards the
+  -- registered decision (sc_pend_fail) is used
+  bus_request: process(core_req_i, sc, sc_valid, sc_pend_fail)
   begin
     sys_req_o <= core_req_i; -- default: pass-through
-    if (sc = '1') and (sc_valid = '0') then -- SC fails: issue bus request, but as READ to check for access faults
+    if (sc = '1') and (((core_req_i.stb = '1') and (sc_valid = '0')) or (sc_pend_fail = '1')) then -- SC fails: issue bus request, but as READ to check for access faults
       sys_req_o.rw  <= '0'; -- read instead of write
       sys_req_o.amo <= '0'; -- no longer an AMO operation
     end if;

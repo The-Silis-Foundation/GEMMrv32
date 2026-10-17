@@ -1,39 +1,8 @@
-# Build artifacts
-build/
-**/build/
-!sw/basys/build/
-sw/basys/build/*
-!sw/basys/build/*.bit
-!sw/basys/build/*.bin
-.Xil/
-*.coe
-*.mem
-*.mif
-*.o
-*.elf
-*.asm
-*.out
-*.hex
-*_image.vhd
-*_wrapper.v
-*.json
-*.cf
-*.dSYM
-
-# Keep default VHDL memory images
-!rtl/core/*_image.vhd
-
-# Track verified FPGA bitstream binaries (explicitly allowed)
-!*.bit
-!sw/basys/build/*.bit
-!sw/basys/build/*.bin
-
-# Track Vivado TCL scripts
-!sw/basys/*.tcl
-!rtl/**/*.tcl
-
-# EDA logs and transient dumps
-*.gdb*
+# EDA tool and synthesis artifacts
+*.bit
+*.bin
+*.mcs
+*.prm
 *.log
 *.jou
 *.backup.jou
@@ -41,57 +10,18 @@ sw/basys/build/*
 *.vcd
 *.fst
 *.ghw
-*.str
-*.pb
-dfx_runtime.txt
-clockInfo.txt
+*.cf
+*.dSYM
+*.gdb*
 
-# Host executables
-sw/image_gen/image_gen
-*.exe
+# Ignore temporary build folders but explicitly keep Basys 3 verified bitstreams
+sw/basys/build/*
+!sw/basys/build/neorv32_basys3.bit
+!sw/basys/build/neorv32_basys3.bin
 
-# Python
-__pycache__/
-*.py[cod]
-riscof_work/
+# Keep default VHDL memory images
+!rtl/core/*_image.vhd
 
-# Temporary files and scratch folders
-*.bak
-*.tmp
-~*
-scratch/
-temp/
-
-# Generated documentation
-/docs/doxygen_build/
-/docs/public/
-
-# Local test runner scripts (do not track)
-run_baremetal_ai.py
-run_tflm_hello.py
-Edge_AI_MCU_Plan.md
-150MHz_Interconnect_Plan.md
-auto_run_benchmark.py
-convert_stage2.py
-decode*.py
-decompile.py
-do_upload.py
-full_stage2_test.py
-hw_runner.py
-ila_dump.csv
-interactive_test*.py
-listen_raw.py
-manual_*.py
-patch*.py
-quick_test.py
-read_uart*.py
-test*.py
-test.s
-boot_it.sh
-build_and_test.sh
-flash_*.sh
-full_rebuild*.sh
-run_linux.sh
-wait_*.sh
-bootlog.txt
-flash_log*.txt
+# Track Vivado / TCL automation scripts
+!sw/basys/*.tcl
+!rtl/**/*.tcl
